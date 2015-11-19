@@ -1,23 +1,23 @@
 # Churn_Rforests
 Churn model using ensemble of down sampled decision trees
 
-##Features:</br></br>
-	a. Most recent ticket type</br>
-	b. Days since last ticket</br>
-	c. Customer life since activation</br>
-	d. Device switch</br>
-	e. Port flag</br>
-	f. Multiline flag</br>
-	g. Plan</br>
-	h. Device life</br>
+###Features:
+	1. Most recent ticket type
+	2. Days since last ticket
+	3. Customer life since activation
+	4. Device switch
+	5. Port flag
+	6. Multiline flag
+	7. Plan
+	8. Device life
 
 *ADD MORE AS NEEDED*	
 	
 
-##Assumptions:</br>
-	a. Devices are grouped into 3 categories depending on our portfolio 
+###Assumptions:
+	1. Devices are grouped into 3 categories depending on our portfolio 
 		(Something to explore expanding into if need be)
-	b. Activations after December 2013 only included just to avoid Defy 
+	2. Activations after December 2013 only included just to avoid Defy 
 		influence
 	
 
