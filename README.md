@@ -11,7 +11,7 @@ Churn model using ensemble of down sampled decision trees
 	7. Plan
 	8. Device life
 
-*ADD MORE AS NEEDED*	
+*as of Nov 19. Add more as needed*	
 	
 
 ###Assumptions:
@@ -20,14 +20,10 @@ Churn model using ensemble of down sampled decision trees
 	2. Activations after December 2013 only included just to avoid Defy 
 		influence
 	
-
-########################################################################
 	
-	
-Model Design:
-Parameters for model: 
-	a. Number of trees or Number of bootstraps
-	b. Majority vote % threshold
-	c. Downsample percentage minority
-########################################################################	
+###Model Design:
+**Parameters for model**: 
+	1. Number of trees or Number of bootstraps
+	2. Majority vote % threshold
+	3. Downsample percentage minority
 
