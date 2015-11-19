@@ -1,15 +1,15 @@
 # Churn_Rforests
 Churn model using ensemble of down sampled decision trees
 
-Features:
-	a. Most recent ticket type
-	b. Days since last ticket
-	c. Customer life since activation
-	d. Device switch
-	e. Port flag
-	f. Multiline flag
-	g. Plan
-	h. Device life
+<b>Features:</b></br></br>
+	a. Most recent ticket type</br>
+	b. Days since last ticket</br>
+	c. Customer life since activation</br>
+	d. Device switch</br>
+	e. Port flag</br>
+	f. Multiline flag</br>
+	g. Plan</br>
+	h. Device life</br>
 
 <i>ADD MORE AS NEEDED</i>	
 ########################################################################	
