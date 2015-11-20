@@ -22,7 +22,7 @@ Churn model using ensemble of down sampled decision trees
 	
 	
 ###Model Design:
-**Parameters for model**: 
+######Parameters for model: 
 	1. Number of trees or Number of bootstraps
 	2. Majority vote % threshold
 	3. Downsample percentage minority
