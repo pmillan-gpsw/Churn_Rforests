@@ -19,6 +19,9 @@ Churn model using ensemble of down sampled decision trees
 		(Something to explore expanding into if need be)
 	2. Activations after December 2013 only included just to avoid Defy 
 		influence
+	3. Last invoice date is the date used to normalize the customers
+		(Issue: Only 168k records after Moto X launch)
+	
 	
 	
 ###Model Design:
