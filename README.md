@@ -17,10 +17,14 @@ Churn model using ensemble of down sampled decision trees
 ###Assumptions:
 	1. Devices are grouped into 3 categories depending on our portfolio 
 		(Something to explore expanding into if need be)
+		1. Moto E = 1
+		2. Moto G = 2
+		3. Moto X = 3
 	2. Activations after December 2013 only included just to avoid Defy 
-		influence
-	3. Last invoice date is the date used to normalize the customers
-		(Issue: Only 168k records after Moto X launch)
+		influence till Jan 2015. (Train set and Test set)
+	3. Validation set outside the time range is Jan 2015 - August 2015
+	4. Last invoice date is the date used to normalize the customers
+		(Issue: 307k records after Moto X launch)
 	
 	
 	

@@ -1,0 +1,87 @@
+--Collated query
+
+select A.sl_uuid, A.last_invoice_date, B.sl_activated_date, B.sl_deactivated_date, C.multiline_flag, D.device_switch,E.device_type
+from 
+(
+  select sl_uuid, last_invoice_date 
+  from customer_view 
+  where sl_activated_date > '2013-12-01' 
+  and sl_activated_date <= '2015-01-01' 
+  and last_invoice_date is not null
+) as A
+left join
+(
+--Selecting sl_activated_date and deactivated_date for customer life calculation
+  select sl_uuid, sl_activated_date, sl_deactivated_date,
+  case
+  when sl_deactivated_date is not null then sl_deactivated_date - sl_activated_date
+  when sl_deactivated_date is null then current_date - sl_activated_date
+  end as customer_life
+  from customer_view
+) as B
+on A.sl_uuid = B.sl_uuid
+left join
+(
+--Multi member account
+  select A.sl_uuid, case
+  when B.num_slines > 1 then 1
+  else 0
+  end as multiline_flag
+  from customer_view as A
+  left join
+  (
+    select account_crm, count(distinct sl_uuid) as num_slines
+    from customer_view
+    group by account_crm
+  ) as B
+on A.account_crm = B.account_crm
+) as C
+on A.sl_uuid = C.sl_uuid
+left join
+(
+--Device switch happened in the past?
+  select sl_uuid, case
+  when count(distinct sku) > 1 then 1
+  else 0
+  end as device_switch
+  from customer_equipment
+  group by sl_uuid
+) as D
+on A.sl_uuid = D.sl_uuid
+
+left join
+(
+--Device type is cheap, moderate and expensive
+  select sl_uuid, 
+  case
+  when most_recent_equipment like '%Moto E%' then 1
+  when most_recent_equipment like '%Moto G%' then 2
+  when most_recent_equipment like '%Moto X%' then 3
+  end as device_type, 
+  case
+  when equipment_deactivated_date is null then current_date - equipment_activated_date
+  else equipment_deactivated_date - equipment_activated_date
+  end as device_life,
+  case
+  when equipment_activated_date > sl_activated_date then 1
+  else 0
+  end as device_switch
+  from customer_view
+) as E
+on A.sl_uuid = E.sl_uuid
+left join
+(
+  --Plan variable
+  select sl_uuid, plan_base,
+  case 
+  when plan_base like '%Talk + Text%' then 1
+  when plan_base like '%Republic Refund%' then 2
+  when plan_base like '%Wi-Fi Only Service%' then 0
+  when plan_base like '%Cell + 3G%' then 3
+  when plan_base like '%Cell + 4G%' then 4
+  else 2
+  end as plan_var
+  from customer_view
+) as F
+on A.sl_uuid = F.sl_uuid
+
