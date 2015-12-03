@@ -1,12 +1,16 @@
 --Collated query
 
-select A.sl_uuid, A.last_invoice_date, B.sl_activated_date, B.sl_deactivated_date, C.multiline_flag, D.device_switch,E.device_type
+select A.sl_uuid, A.last_invoice_date, A.churn_flag, B.sl_activated_date, B.sl_deactivated_date, C.multiline_flag, D.device_switch,E.device_type
 from 
 (
-  select sl_uuid, last_invoice_date 
+  select sl_uuid, last_invoice_date,
+  case
+	when sl_deactivated_date is null then 0
+	when sl_deactivated_date is not null then 1
+	end as churn_flag
   from customer_view 
-  where sl_activated_date > '2013-12-01' 
-  and sl_activated_date <= '2015-01-01' 
+  where sl_activated_date > '%MOD_START_DATE%' 
+  and sl_activated_date <= '%MOD_END_DATE%' 
   and last_invoice_date is not null
 ) as A
 left join

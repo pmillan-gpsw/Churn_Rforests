@@ -25,7 +25,10 @@ Churn model using ensemble of down sampled decision trees
 	3. Validation set outside the time range is Jan 2015 - August 2015
 	4. Last invoice date is the date used to normalize the customers
 		(Issue: 307k records after Moto X launch)
-	
+	5. Tickets: Ticket type, classification, triage
+		1. Triage : Devc, acct, text, dvhw, cllc, ncng, misc, bill, ordr, crr,data, spam
+		2. Request type: Remove cancellation tickets - dummy variables for tech, order, num_trans, billing, account
+		3. Group name: 
 	
 	
 ###Model Design:

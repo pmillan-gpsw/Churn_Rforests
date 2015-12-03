@@ -1,0 +1,64 @@
+
+--Bill day query
+select 
+  sl_uuid, 
+  bill_cycle_day,
+  sl_deactivated_date,
+  last_invoice_date,
+  case
+  --First case: When the person has not churned yet & bill cycle day is lesser than current date ( bill cycle date just passed )-> Choose the bill cycle day and create the previous bill cycle day by extracting parts of current date
+  when 
+    sl_deactivated_date is null 
+    and bill_cycle_day is not null 
+    and bill_cycle_day like '%EOM%'
+    and extract(day from current_date ) < 30 
+      then to_date(cast(extract(year from current_date - 30) as text)||to_char(extract(month from current_date - 30), 'FM00')||'30','YYYYMMDD')
+  when 
+    sl_deactivated_date is null 
+    and bill_cycle_day2 is not null 
+    and bill_cycle_day like '%EOM%'
+    and extract(day from current_date ) >= 30 
+      then to_date(cast(extract(year from current_date ) as text)||to_char(extract(month from current_date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
+  when 
+    sl_deactivated_date is null 
+    and bill_cycle_day not like '%EOM%'
+    and bill_cycle_day is not null
+    and cast(bill_cycle_day2 as integer) <= extract(day from current_date ) 
+      then to_date(cast(extract(year from current_date) as text)||to_char(extract(month from current_date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
+
+  --Second case: When the person has not churned yet & bill cycle day is greater than current date ( bill cycle date yet to pass )-> Choose the bill cycle day and create the previous bill cycle day by extracting parts of current date
+  when 
+    sl_deactivated_date is null  
+    and bill_cycle_day not like '%EOM%'
+    and bill_cycle_day is not null
+    and cast(bill_cycle_day2 as integer) > extract(day from current_date ) 
+      then to_date(cast(extract(year from current_date - 30) as text)||to_char(extract(month from current_date - 30), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
+  --Third case: When the person has churned -> Choose the bill cycle day before the churn date
+  when
+    sl_deactivated_date is not null
+    and bill_cycle_day2 is not null
+    and cast(bill_cycle_day2 as integer) > extract(day from sl_deactivated_date ) 
+      then to_date(cast(extract(year from sl_deactivated_date - 30) as text)||to_char(extract(month from sl_deactivated_date - 30), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
+  when
+    sl_deactivated_date is not null
+    and bill_cycle_day2 is not null
+    and cast(bill_cycle_day2 as integer) <= extract(day from sl_deactivated_date ) 
+      then to_date(cast(extract(year from sl_deactivated_date) as text)||to_char(extract(month from sl_deactivated_date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD') 
+ else current_date
+  end as last_bill_date
+  
+  from
+   (
+      select *,
+      case
+      when bill_cycle_day = 'EOM' then '30'
+      else bill_cycle_day
+      end as bill_cycle_day2
+      from 
+      customer_view
+    ) 
+  where 
+    sl_activated_date >= '2013-12-01' 
+    and sl_activated_date <= '2015-01-01'
+    and last_invoice_date is not null
+ 
