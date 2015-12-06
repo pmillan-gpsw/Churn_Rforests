@@ -1,0 +1,13 @@
+CREATE TABLE customer_sldata
+(
+	sl_uuid VARCHAR(255) NOT NULL,
+	last_invoice_date DATE,
+	churn_flag INT,
+	sl_activated_date DATE NOT NULL, 
+	sl_deactivated_date DATE, 
+	multiline_flag INT, 
+	device_switch INT ,
+	device_type INT,
+	PRIMARY KEY (sl_uuid)
+);
+	

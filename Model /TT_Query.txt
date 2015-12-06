@@ -59,8 +59,8 @@ with bill_data as
 				customer_view
 		) 
 	where 
-		sl_activated_date >= '%MOD_START_DATE%' 
-		and sl_activated_date <= '%MOD_END_DATE%'
+		sl_activated_date >= '2013-12-01' 
+		and sl_activated_date <= '2015-01-01'
 		and last_invoice_date is not null
     --and bill_cycle_day not like '%EOM%'  
 )
@@ -78,8 +78,8 @@ with bill_data as
 		A.tags,
 		B.last_bill_date, 
 		A.created_at::date, 
-		B.last_bill_date - %GOBACK_TIME% as cutoff_date, 
-		A.created_at::date - (B.last_bill_date - %GOBACK_TIME%) as diff_date, 
+		B.last_bill_date - 60 as cutoff_date, 
+		A.created_at::date - (B.last_bill_date - 60) as diff_date, 
 		B.churn_flag 
 	from 
 		(
@@ -107,11 +107,11 @@ with bill_data as
 								customer_view 
 							where 
 								bill_cycle_day is not null 
-								and sl_activated_date between '%MOD_START_DATE%' and '%MOD_END_DATE%'
+								and sl_activated_date between '2013-12-01' and '2015-01-01'
 						)
 			)
 		)as A
-	left join 
+	inner join 
 		(
 			select *, 
 				case 
@@ -125,6 +125,6 @@ with bill_data as
 		) as B
 	on 
 		A.sl_uuid = B.sl_uuid 
-		and A.created_at >= B.last_bill_date - %GOBACK_TIME%
+		and A.created_at >= B.last_bill_date - 60
 ;
 

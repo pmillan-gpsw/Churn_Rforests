@@ -1,0 +1,15 @@
+CREATE TABLE customer_ttdata
+(
+	sl_uuid VARCHAR(255),
+	ticket_id VARCHAR(255),
+	group_name VARCHAR(255),
+	request_type VARCHAR(255),
+	solved_at DATETIME,
+	ticket_class VARCHAR(255),
+	ticket_type VARCHAR(255),
+	tags VARCHAR(6555),
+	last_bill_date DATE,
+	created_at DATETIME,
+	cutoff_date DATE,
+	PRIMARY KEY (sl_uuid, ticket_id)
+);
