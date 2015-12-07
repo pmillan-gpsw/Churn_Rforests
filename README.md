@@ -27,8 +27,9 @@ Churn model using ensemble of down sampled decision trees
 		(Issue: 307k records after Moto X launch)
 	5. Tickets: Ticket type, classification, triage
 		1. Triage : Devc, acct, text, dvhw, cllc, ncng, misc, bill, ordr, crr,data, spam
-		2. Request type: Remove cancellation tickets - dummy variables for tech, order, num_trans, billing, account
-		3. Group name: 
+		2. Request type: Remove tickets with request type: rw_cancel
+		3. Group name: Remove tickets with group name: Cancellations
+		4. ticket class: Remove tickets with ticket class: rw_cancel_manual rw_cancel_automated
 	
 	
 ###Model Design:

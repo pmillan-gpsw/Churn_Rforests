@@ -1,7 +1,8 @@
 CREATE TABLE customer_tkdata
 (
 	sl_uuid VARCHAR(255) NOT NULL,
-	num_tkts INT, 
+	churn_flag INT,
+	num_tickets INT, 
 	PRIMARY KEY (sl_uuid)
 );
 	

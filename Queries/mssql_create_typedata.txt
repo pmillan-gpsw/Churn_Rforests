@@ -7,9 +7,12 @@ CREATE TABLE customer_ttdata
 	solved_at DATETIME,
 	ticket_class VARCHAR(255),
 	ticket_type VARCHAR(255),
+	resolution_time NUMERIC,
 	tags VARCHAR(6555),
 	last_bill_date DATE,
 	created_at DATETIME,
 	cutoff_date DATE,
+	diff_date DATE,
+	churn_flag INT,
 	PRIMARY KEY (sl_uuid, ticket_id)
 );

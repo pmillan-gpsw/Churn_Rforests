@@ -1,6 +1,6 @@
 --Collated query
 
-select A.sl_uuid, A.last_invoice_date, A.churn_flag, B.sl_activated_date, B.sl_deactivated_date, C.multiline_flag, D.device_switch,E.device_type
+select A.sl_uuid, A.last_invoice_date, A.churn_flag, B.customer_life, B.sl_activated_date, B.sl_deactivated_date, C.multiline_flag, D.device_switch,E.device_type
 from 
 (
   select sl_uuid, last_invoice_date,
@@ -61,6 +61,7 @@ left join
   when most_recent_equipment like '%Moto E%' then 1
   when most_recent_equipment like '%Moto G%' then 2
   when most_recent_equipment like '%Moto X%' then 3
+  else 4
   end as device_type, 
   case
   when equipment_deactivated_date is null then current_date - equipment_activated_date

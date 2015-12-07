@@ -75,6 +75,7 @@ with bill_data as
 		A.solved_at,
 		A.ticket_class,
 		A.ticket_type,
+		A.resolution_time,
 		A.tags,
 		B.last_bill_date, 
 		A.created_at::date, 
@@ -90,6 +91,7 @@ with bill_data as
 				group_name, 
 				request_type, 
 				solved_at, 
+				full_resolution_time_in_minutes as resolution_time,
 				internal_ticket_classification as ticket_class, 
 				ticket_type, 
 				tags
