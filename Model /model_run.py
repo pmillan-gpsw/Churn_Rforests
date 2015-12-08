@@ -91,7 +91,14 @@ def raw_data_pull(START_DATE, END_DATE, GOBACK_TIME):
 			temp_dev_switch.append(i)
 	sl_data['device_switch'] = temp_dev_switch
 	tt_data = tt_data.dropna(subset=['churn_flag','last_bill_date'], how='all')
-	tt_data = tt_data.dropna(subset=['resolution_time'], how='all')		
+	tt_data = tt_data.dropna(subset=['resolution_time'], how='all')	
+	
+	tt_data['group_name'].fillna('Other', inplace=True)
+	print tt_data['group_name'].unique()
+	tt_data['request_type'].fillna('Other', inplace=True)
+	tt_data['ticket_class'].fillna('Other', inplace=True)
+	tt_data['ticket_type'].fillna('Other', inplace=True)
+		
 	sl_data.to_sql(con=db_conn, name='customer_sldata', if_exists='append', flavor='mysql')
 	tk_data.to_sql(con=db_conn, name='customer_tkdata', if_exists='append', flavor='mysql')
 	tt_data.to_sql(con=db_conn, name='customer_ttdata', if_exists='append', flavor='mysql')	
@@ -170,6 +177,19 @@ def data_transform(sl_data, tk_data, tt_data):
 	Take distinct values in tags, group names, request types
 	Create dummy variables for each 
 	'''
+	#@local Variables
+	try:
+		db_conn = ms.connect("localhost","root","root","churn_model")
+		print ('MySQL connection:\t\t\t[OK]')
+	except:
+		print ('MySQL connection:\t\t\t[Fail]')
+	
+	try:
+		db_curs = db_conn.cursor()
+		print ('Cursor:\t\t\t[OK]')
+	except:
+		print ('Cursor:\t\t\t[Fail]')
+
 	sl_data = sl_data[['sl_uuid',
 						'churn_flag',
 						'device_switch',
@@ -189,7 +209,7 @@ def data_transform(sl_data, tk_data, tt_data):
 	
 	#---------PROCESS STEP:- MERGE DATA:: service line + number of tickets		
 	model_data = pd.merge(sl_data, tk_data, on=['sl_uuid'], how='left')
-	
+	print model_data.columns
 	#---------PROCESS STEP:- Get distinct values of dummy variables
 	group_name = tt_data['group_name'].unique().tolist()
 	request_type = tt_data['request_type'].unique().tolist()
@@ -231,7 +251,12 @@ def data_transform(sl_data, tk_data, tt_data):
 		ttype_file.write('\n')
 	print ("Writing to files:\t\t\t[OK]")
 	
-	dummy_var_header = group_name + request_type + ticket_class + tags_distinct + ticket_type
+	group_file.close()
+	tclass_file.close()
+	tag_file.close()
+	ttype_file.close()
+	request_file.close()
+	dummy_var_header = group_name + request_type + ticket_class + ticket_type
 	dummy = {}
 	sl_uuid = model_data['sl_uuid'].unique()
 	for i in sl_uuid:
@@ -242,28 +267,28 @@ def data_transform(sl_data, tk_data, tt_data):
 			#group_name
 			for x in group_name:
 				if x in subset['group_name'].tolist():
-					dummy_indiv.append(1)
+					dummy_indiv.append(subset['group_name'].tolist().count(x))
 				else:
 					dummy_indiv.append(0)
 			
 			for x in request_type:
 				if x in subset['request_type'].tolist():
-					dummy_indiv.append(1)
+					dummy_indiv.append(subset['request_type'].tolist().count(x))
 				else:
 					dummy_indiv.append(0)
 
 			for x in ticket_class:
 				if x in subset['ticket_class'].tolist():
-					dummy_indiv.append(1)
+					dummy_indiv.append(subset['ticket_class'].tolist().count(x))
 				else:
 					dummy_indiv.append(0)
 
 			for x in ticket_type:
 				if x in subset['ticket_type'].tolist():
-					dummy_indiv.append(1)
+					dummy_indiv.append(subset['ticket_type'].tolist().count(x))
 				else:
 					dummy_indiv.append(0)
-					
+			'''		
 			sl_tags = []
 			temp = subset['tags'].tolist()
 			for y in temp:
@@ -274,13 +299,59 @@ def data_transform(sl_data, tk_data, tt_data):
 					dummy_indiv.append(1)
 				else:
 					dummy_indiv.append(0)
-			
+			'''
 			dummy[i] = dummy_indiv								
 		else:
 			dummy[i] = [0] * len(dummy_var_header)
-	model_df = pd.DataFrame.from_dict(dummy, 'index', columns=dummy_var_header)	
+	model_df = pd.DataFrame.from_dict(dummy, 'index')
+	model_df.columns = dummy_var_header	
+	model_df['sl_uuid'] = model_df.index
+	model_df = pd.merge(model_df, model_data, on=['sl_uuid'], how='left')
 	
+	#@sql write: to local db -> model dataset
+	try:
+		db_curs.execute('DROP TABLE model_data;')
+	except:
+		print ('Table not present')
+	pk.dump(model_df, open('/home/rsrash1990/Ravi Files/Work Projects/Churn Model/Pickle data/model_data.pk','w'))
+	#model_df.to_sql(con=db_conn, name='model_data', if_exists='append', flavor='mysql')
+	#print model_df.head()
+	#print model_df.describe()
+	'''
+	for i in model_df.columns:
+		temp = model_df[i].tolist()
+		print (i + '\t:' + str(sum(x is None for x in temp)))
+	'''
+	print model_df.columns
+	model = model_df[['sl_uuid', 'churn_flag']]
+	print model.describe()
+	return model_df	
 	
+
+def train_test_split(model_df, percent, num_bootstraps):
+	'''
+	Splits the model dataset into the required train and test data sets
+	Use 'percent' to first split train and test
+	Then use the train data set to understand how much churned subs are
+		present
+	Split unchurned subs into multiple random selections equivalent in 
+		size to the churned subs set
+	Return each dataset as train set in a dictionary
+	'''
+	master_train, test_data = tts(model_df, test_size=percent)
+	train_churn = master_train[master_train['churn_flag'] == 1]
+	train_uchurn = master_train[master_train['churn_flag'] == 0]
+	
+	train_subsample_size = int(len(train_churn) * 0.8)
+	sub_uchurn_percent = float(train_subsample_size)/float(len(train_uchurn))
+	
+	train_dsamples = {}
+	
+	for i in range(num_bootstraps):
+		down_train_uchurn, dummy = tts(train_uchurn, test_size= 1.0 - sub_uchurn_percent)
+		down_train_churn, dummy = tts(train_churn, test_size = 0.2)
+		
+		
 		
 def main():
 	#---------PROCESS STEP:- CREATING VARIABLES FROM COMM LINE ARGS
@@ -300,7 +371,7 @@ def main():
 		sl_data = raw_data_dict['sl_data']
 		tk_data = raw_data_dict['tk_data']
 		tt_data = raw_data_dict['tt_data']
-		trans_data_dict = data_transform(sl_data, tk_data, tt_data)
+		model_df = data_transform(sl_data, tk_data, tt_data)
 	
 	elif EXECUTE_PHASE == '2':
 		#Skip data pull
@@ -308,7 +379,7 @@ def main():
 		sl_data = raw_data_dict['sl_data']
 		tk_data = raw_data_dict['tk_data']
 		tt_data = raw_data_dict['tt_data']
-		trans_data_dict = data_transform(sl_data, tk_data, tt_data)
+		model_df = data_transform(sl_data, tk_data, tt_data)
 		
 		
 

@@ -1,16 +1,13 @@
 Technical Assistance
-Customer Advocacy
 RMA - Replacement
+Customer Advocacy
 Triage
-Cancellations
-Sales
-Billing
 Customer Solutions
-Maintenance, Outages, & Bugs
+Billing
 Porting
+Sales
 CA leads/mentors
-Marketing
-Fraud Management
 Managers
 Tier 3
+Maintenance, Outages, & Bugs
 Credit Requests

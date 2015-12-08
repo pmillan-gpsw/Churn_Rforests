@@ -111,6 +111,9 @@ with bill_data as
 								bill_cycle_day is not null 
 								and sl_activated_date between '%MOD_START_DATE%' and '%MOD_END_DATE%'
 						)
+					and group_name != 'Cancellations'
+					and request_type != 'rw_cancel'
+					and internal_ticket_classification not in ('rw_cancel_automated', 'rw_cancel_manual')		
 			)
 		)as A
 	left join 
