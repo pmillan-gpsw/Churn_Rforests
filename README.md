@@ -1,12 +1,12 @@
 # Churn_Rforests
-Goal:
+**Goal:**
 
 Predicting the probability that a customer will churn looking at 
 his recent (going back 60 days from deactivation date or current date
 if he is an active customer) ticketing activity, his service line history
 
 ###Data:
-	1. __Serviceline data__ : _customer_view_
+	1. <b>Serviceline data</b> : customer_view
 		1. Customer life -> Days since activation
 		2. Current device type -> Moto E, G or X 
 		3. Current plan 
@@ -15,7 +15,7 @@ if he is an active customer) ticketing activity, his service line history
 		5. Device life -> Days since current device activation
 		6. Last bill date -> (Not a model variable)
 	
-	2. **Ticket data** : *zd_view*
+	2. Ticket data : zd_view
 		1. 
 	2. Days since last ticket
 	3. Customer life since activation
