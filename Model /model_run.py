@@ -23,6 +23,7 @@ from scipy.stats import mode
 from pandas.io import sql
 from sklearn.ensemble import RandomForestClassifier as RF
 from sklearn.linear_model import LogisticRegression as LR
+from sklearn.tree import DecisionTreeClassifier as DT
 from sklearn.metrics import precision_recall_fscore_support as PRFS
 #################################################
 
@@ -474,6 +475,106 @@ def model_build(train_indep, train_dep, num_bootstraps, num_trees, master_train,
 	return models	
 
 
+def dt_ensemble(train_indep, train_dep, num_bootstraps, num_trees, master_train, test_data):
+	models = []
+	for i in range(num_bootstraps):
+		print ('Building forest:\t'+str(i))
+		train_sub_indep = train_indep[i]
+		indep_columns = train_sub_indep.columns.tolist()
+		indep_columns.remove('sl_uuid')
+		train_sub_indep = train_sub_indep[indep_columns]
+		train_sub_dep = train_dep[i]['churn_flag'].tolist()
+		#print train_sub_dep.head()
+		#Model variable
+		model = DT()
+		model.fit(train_sub_indep, train_sub_dep)
+		print ('Model '+str(i)+' built:')
+		print ('Accuracy: '+str(model.score(train_sub_indep, train_sub_dep)))
+		models.append(model)
+	
+	print ('Evaluating train data')
+	indep_columns = master_train.columns.tolist()
+	indep_columns.remove('churn_flag')
+	indep_columns.remove('sl_uuid')
+	master_indep = master_train[indep_columns]
+	master_dep = master_train[['churn_flag']]
+	predictor = {}
+	pred_series = []
+	for i in models:
+		prediction = i.predict(master_indep)
+		colname = 'Model'+str(models.index(i))
+		predictor[colname] = prediction
+	
+	pred_df = pd.DataFrame(predictor, index = master_dep.index)
+	full_pred = pred_df.mean(1)
+	master_dep['join_col'] = master_dep.index
+	probability = pred_df.mean(1)
+	pred_df['prob'] = probability
+	final_pred = []
+	for i in pred_df['prob']:
+		if i>= 0.85:
+			final_pred.append(1)
+		else:
+			final_pred.append(0)
+	pred_df['final_pred'] = final_pred
+	#pred_df.to_excel('pred_df.xlsx')
+	pred_df['join_col'] = pred_df.index
+	master_dep = pd.merge(master_dep, pred_df, on=['join_col'], how='left')
+	acc_check = master_dep[master_dep['churn_flag'] != master_dep['final_pred']].copy()
+	acc_check = float(len(acc_check))/float(len(master_dep))
+	print acc_check
+	#master_dep.to_excel('Final_pred.xlsx')
+	score_train = PRFS(y_true=master_dep['churn_flag'], y_pred=master_dep['final_pred'], average='binary')
+	score_train2 = PRFS(y_true=master_dep['churn_flag'], y_pred=master_dep['final_pred'], average='binary', pos_label = 0)
+	print ('Model accuracy:\t' + str(1.0 - acc_check))	
+	print ('Precision in predicting churners: \t' + str(score_train[0]))
+	print ('Recall:\t' + str(score_train[1]))	
+	#print score_train2
+
+
+	print ('Evaluating test data')
+	indep_columns = master_train.columns.tolist()
+	indep_columns.remove('churn_flag')
+	indep_columns.remove('sl_uuid')
+	master_indep = test_data[indep_columns]
+	master_dep = test_data[['churn_flag']]
+	predictor = {}
+	pred_series = []
+	for i in models:
+		prediction = i.predict(master_indep)
+		colname = 'Model'+str(models.index(i))
+		predictor[colname] = prediction
+	
+	pred_df = pd.DataFrame(predictor, index = master_dep.index)
+	full_pred = pred_df.mean(1)
+	master_dep['join_col'] = master_dep.index
+	probability = pred_df.mean(1)
+	pred_df['prob'] = probability
+	final_pred = []
+	for i in pred_df['prob']:
+		if i>= 0.85:
+			final_pred.append(1)
+		else:
+			final_pred.append(0)
+	pred_df['final_pred'] = final_pred
+	#pred_df.to_excel('pred_df.xlsx')
+	pred_df['join_col'] = pred_df.index
+	master_dep = pd.merge(master_dep, pred_df, on=['join_col'], how='left')
+	acc_check = master_dep[master_dep['churn_flag'] != master_dep['final_pred']].copy()
+	acc_check = float(len(acc_check))/float(len(master_dep))
+	
+	#master_dep.to_excel('Final_pred.xlsx')
+	score_train = PRFS(y_true=master_dep['churn_flag'], y_pred=master_dep['final_pred'], average='binary')
+	score_train2 = PRFS(y_true=master_dep['churn_flag'], y_pred=master_dep['final_pred'], average='binary', pos_label = 0)
+	print ('Model accuracy:\t' + str(1.0 - acc_check))
+	print ('Precision in predicting churners: \t' + str(score_train[0]))
+	print ('Recall:\t' + str(score_train[1]))	
+		
+	return models	
+	
+
+
+
 def logistic_ensemble(train_indep, train_dep, num_bootstraps, num_trees, master_train, test_data):
 	models = []
 	for i in range(num_bootstraps):
@@ -571,6 +672,57 @@ def logistic_ensemble(train_indep, train_dep, num_bootstraps, num_trees, master_
 		
 	return models	
 	
+def whole_data_models(train_indep, train_dep, num_bootstraps, num_trees, master_train, test_data):
+	model_rf = RF(n_estimators = num_trees, criterion = 'gini', bootstrap = False, n_jobs=-1)
+	model_lr = LR()
+	model_dt = DT()
+	indep_columns = master_train.columns.tolist()
+	indep_columns.remove('churn_flag')
+	indep_columns.remove('sl_uuid')
+	master_indep = master_train[indep_columns]
+	master_dep = master_train['churn_flag'].tolist()
+	model_rf.fit(master_indep, master_dep)
+	model_lr.fit(master_indep, master_dep)
+	model_dt.fit(master_indep, master_dep)
+	#Printing out accuracies from train set
+	print model_rf.score(master_indep, master_dep)
+	print model_lr.score(master_indep, master_dep)
+	print model_dt.score(master_indep, master_dep)
+	train_pred_rf = model_rf.predict(master_indep)
+	train_pred_lr = model_lr.predict(master_indep)
+	train_pred_dt = model_dt.predict(master_indep)
+	score_rf = PRFS(y_true=master_dep, y_pred=train_pred_rf, average='binary')
+	score_lr = PRFS(y_true=master_dep, y_pred=train_pred_lr, average='binary')
+	score_dt = PRFS(y_true=master_dep, y_pred=train_pred_dt, average='binary')
+	
+	print ('Random forest precision and recall:\t' + str(score_rf[0]) + '\t' + str(score_rf[1]))
+	print ('Logistic regression precision and recall:\t' + str(score_lr[0]) + '\t' + str(score_lr[1]))	
+	print ('Decision tree precision and recall:\t' + str(score_dt[0]) + '\t' + str(score_dt[1]))		
+	
+	#Evaluating test data
+	indep_columns = master_train.columns.tolist()
+	indep_columns.remove('churn_flag')
+	indep_columns.remove('sl_uuid')
+	master_indep = test_data[indep_columns]
+	master_dep = test_data['churn_flag'].tolist()
+	model_rf.fit(master_indep, master_dep)
+	model_lr.fit(master_indep, master_dep)
+	model_dt.fit(master_indep, master_dep)
+	#Printing out accuracies from train set
+	print ('TEST DATA')
+	print model_rf.score(master_indep, master_dep)
+	print model_lr.score(master_indep, master_dep)
+	print model_dt.score(master_indep, master_dep)
+	train_pred_rf = model_rf.predict(master_indep)
+	train_pred_lr = model_lr.predict(master_indep)
+	train_pred_dt = model_dt.predict(master_indep)
+	score_rf = PRFS(y_true=master_dep, y_pred=train_pred_rf)
+	score_lr = PRFS(y_true=master_dep, y_pred=train_pred_lr )
+	score_dt = PRFS(y_true=master_dep, y_pred=train_pred_dt )
+	
+	print ('Random forest precision and recall:\t' + str(score_rf[0]) + '\t' + str(score_rf[1]))
+	print ('Logistic regression precision and recall:\t' + str(score_lr[0]) + '\t' + str(score_lr[1]))	
+	print ('Decision tree precision and recall:\t' + str(score_dt[0]) + '\t' + str(score_dt[1]))		
 
 		
 def main():
@@ -618,8 +770,11 @@ def main():
 		test_data = return_dict['test_set']
 		master_train = return_dict['master_train']
 		#models = model_build(train_indep, train_dep, NUM_BOOTSTRAPS, NUM_TREES, master_train, test_data)
-		models = logistic_ensemble(train_indep, train_dep, NUM_BOOTSTRAPS, NUM_TREES, master_train, test_data)	
-		
+		#models = logistic_ensemble(train_indep, train_dep, NUM_BOOTSTRAPS, NUM_TREES, master_train, test_data)	
+		#models = dt_ensemble(train_indep, train_dep, NUM_BOOTSTRAPS, NUM_TREES, master_train, test_data)
+		models = whole_data_models(train_indep, train_dep, NUM_BOOTSTRAPS, NUM_TREES, master_train, test_data)
+
+
 
 #Main Execution:
 if __name__ == '__main__':

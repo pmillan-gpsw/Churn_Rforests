@@ -45,9 +45,9 @@ if he is an active customer)* ticketing activity, his service line history
 
 Model | Whole data (Accuracy) | Whole data (Precision) | Whole data (Recall) | Downsampled bootstrap(Accuracy) | DS (Precision) | DS (Recall)
 ----- | --------------------- | ---------------------- | ------------------- | ------------------------------- | -------------- | -----------
-Random Forest | 95% | 80% | 70% | 95% | 80% | 70%
-Logistic Regression | 85% | 38% | 72% | 85% | 38% | 72%
-
+Random Forest | - | - | - | 95% | 80% | 70%
+Logistic Regression | - | - | - | 85% | 38% | 72%
+Decision Trees | - | - | - | 95% | 78% | 70%
 
 
 ###Next steps:
