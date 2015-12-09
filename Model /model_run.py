@@ -22,6 +22,7 @@ from sklearn.naive_bayes import MultinomialNB as MNB
 from scipy.stats import mode
 from pandas.io import sql
 from sklearn.ensemble import RandomForestClassifier as RF
+from sklearn.linear_model import LogisticRegression as LR
 from sklearn.metrics import precision_recall_fscore_support as PRFS
 #################################################
 
@@ -484,7 +485,7 @@ def logistic_ensemble(train_indep, train_dep, num_bootstraps, num_trees, master_
 		train_sub_dep = train_dep[i]['churn_flag'].tolist()
 		#print train_sub_dep.head()
 		#Model variable
-		model = RF(n_estimators = num_trees, criterion = 'gini', bootstrap = False, n_jobs=-1)
+		model = LR()
 		model.fit(train_sub_indep, train_sub_dep)
 		print ('Model '+str(i)+' built:')
 		print ('Accuracy: '+str(model.score(train_sub_indep, train_sub_dep)))
@@ -616,8 +617,8 @@ def main():
 		train_dep = return_dict['train_dep']
 		test_data = return_dict['test_set']
 		master_train = return_dict['master_train']
-		models = model_build(train_indep, train_dep, NUM_BOOTSTRAPS, NUM_TREES, master_train, test_data)
-			
+		#models = model_build(train_indep, train_dep, NUM_BOOTSTRAPS, NUM_TREES, master_train, test_data)
+		models = logistic_ensemble(train_indep, train_dep, NUM_BOOTSTRAPS, NUM_TREES, master_train, test_data)	
 		
 
 #Main Execution:
