@@ -6,7 +6,7 @@ his recent (going back 60 days from deactivation date or current date
 if he is an active customer) ticketing activity, his service line history
 
 ###Data:
-* **Serviceline data** : customer_view
+* **Serviceline data** : *customer_view*
   * Customer life -> Days since activation
   * Current device type -> Moto E, G or X 
   * Current plan 
@@ -16,7 +16,7 @@ if he is an active customer) ticketing activity, his service line history
   * Last bill date -> (Not a model variable)
   * Churn flag
   * Multiline flag	
-* Ticket data : zd_view
+* **Ticket data** : *zd_view*
   * Number of tickets : past 60 days 
   * Group name
   * Request type
@@ -27,9 +27,9 @@ if he is an active customer) ticketing activity, his service line history
 	
 
 ###Assumptions:
-	1. Timeline of data : Dec, 2013 to Jan, 2015
+	1. Timeline of data : **Dec, 2013 to Jan, 2015**
 	2. Validation set outside the time range is Jan 2015 - August 2015
-	4. Last bill date is the date used to normalize the customers
+	4. **Last bill date** is the date used to normalize the customers
 		(Issue: 180k records after Moto X launch)
 	
 	
