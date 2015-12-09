@@ -1,9 +1,9 @@
 # Churn_Rforests
 ###Goal:
 
-Predicting the probability that a customer will churn looking at 
-his recent (going back 60 days from deactivation date or current date
-if he is an active customer) ticketing activity, his service line history
+Predict probability that a customer will churn looking at 
+his recent *(going back 60 days from deactivation date or current date
+if he is an active customer)* ticketing activity, his service line history
 
 ###Data:
 * **Serviceline data** : *customer_view*
@@ -27,9 +27,9 @@ if he is an active customer) ticketing activity, his service line history
 	
 
 ###Assumptions:
-	1. Timeline of data : **Dec, 2013 to Jan, 2015**
-	2. Validation set outside the time range is Jan 2015 - August 2015
-	4. **Last bill date** is the date used to normalize the customers
+1. Timeline of data : **Dec, 2013 to Jan, 2015**
+2. Validation set outside the time range is Jan 2015 - August 2015
+3. **Last bill date** is the date used to normalize the customers
 		(Issue: 180k records after Moto X launch)
 	
 	
