@@ -7,23 +7,23 @@ if he is an active customer) ticketing activity, his service line history
 
 ###Data:
 	1. Serviceline data : customer_view
-		* Customer life -> Days since activation
-		* Current device type -> Moto E, G or X 
-		* Current plan 
-		* Device switch flag -> Current device different from the one 
+	  * Customer life -> Days since activation
+	  * Current device type -> Moto E, G or X 
+	  * Current plan 
+	  * Device switch flag -> Current device different from the one 
 			used for first activation
-		* Device life -> Days since current device activation
-		* Last bill date -> (Not a model variable)
-		* Churn flag
-		* Multiline flag
+	  * Device life -> Days since current device activation
+	  * Last bill date -> (Not a model variable)
+	  * Churn flag
+	  * Multiline flag
 		
 		
 	2. Ticket data : zd_view
-		* Number of tickets : past 60 days 
-		* Group name
-		* Request type
-		* Ticket class
-		* Ticket type
+	  * Number of tickets : past 60 days 
+	  * Group name
+	  * Request type
+	  * Ticket class
+	  * Ticket type
 
 *as of Dec 8. Add more as needed*	
 	
@@ -42,3 +42,5 @@ if he is an active customer) ticketing activity, his service line history
 
 ###Results:
 ![Results](/Screenshots/Result.png)
+
+
