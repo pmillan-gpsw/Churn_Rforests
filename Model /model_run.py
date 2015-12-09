@@ -21,6 +21,8 @@ from sklearn import preprocessing
 from sklearn.naive_bayes import MultinomialNB as MNB
 from scipy.stats import mode
 from pandas.io import sql
+from sklearn.ensemble import RandomForestClassifier as RF
+from sklearn.metrics import precision_recall_fscore_support as PRFS
 #################################################
 
 
@@ -307,6 +309,7 @@ def data_transform(sl_data, tk_data, tt_data):
 	model_df.columns = dummy_var_header	
 	model_df['sl_uuid'] = model_df.index
 	model_df = pd.merge(model_df, model_data, on=['sl_uuid'], how='left')
+	model_df['num_tickets'] = model_df['num_tickets'].fillna(0)
 	
 	#@sql write: to local db -> model dataset
 	try:
@@ -322,9 +325,10 @@ def data_transform(sl_data, tk_data, tt_data):
 		temp = model_df[i].tolist()
 		print (i + '\t:' + str(sum(x is None for x in temp)))
 	'''
-	print model_df.columns
+
 	model = model_df[['sl_uuid', 'churn_flag']]
-	print model.describe()
+
+	pk.dump(model_df,open('/home/rsrash1990/Ravi Files/Work Projects/Churn Model/Pickle data/model_df.pk','w'))
 	return model_df	
 	
 
@@ -338,20 +342,135 @@ def train_test_split(model_df, percent, num_bootstraps):
 		size to the churned subs set
 	Return each dataset as train set in a dictionary
 	'''
-	master_train, test_data = tts(model_df, test_size=percent)
-	train_churn = master_train[master_train['churn_flag'] == 1]
+	print ('Entered train test split')
+	master_train, test_data = tts(model_df, test_size=percent)			#Master train = 80% of data, Therefore PERCENT = 0.2
+	train_churn = master_train[master_train['churn_flag'] == 1]			#
 	train_uchurn = master_train[master_train['churn_flag'] == 0]
-	
 	train_subsample_size = int(len(train_churn) * 0.8)
 	sub_uchurn_percent = float(train_subsample_size)/float(len(train_uchurn))
+	test_size = sub_uchurn_percent 
 	
-	train_dsamples = {}
+	train_indep_dsamples = {}
+	train_dep_dsamples = {}
 	
+	print test_size
 	for i in range(num_bootstraps):
-		down_train_uchurn, dummy = tts(train_uchurn, test_size= 1.0 - sub_uchurn_percent)
-		down_train_churn, dummy = tts(train_churn, test_size = 0.2)
+		print (str(i))
+		dummy, down_train_uchurn = tts(train_uchurn, test_size= test_size)
+		dummy, down_train_churn = tts(train_churn, test_size = 0.8)
+		indep_columns = down_train_churn.columns.tolist()
+		indep_columns.remove('churn_flag')
+		dep_columns = ['churn_flag']
+		indep_set = pd.concat([down_train_uchurn[indep_columns], down_train_churn[indep_columns]])
+		dep_set = pd.concat([down_train_uchurn[dep_columns], down_train_churn[dep_columns]])
+		train_indep_dsamples[i] = indep_set
+		train_dep_dsamples[i] = dep_set
+	
+	return_dict = {'test_set': test_data, 'train_indep': train_indep_dsamples, 'train_dep':train_dep_dsamples, 'master_train':master_train}
+	
+	return return_dict
+	
+def model_build(train_indep, train_dep, num_bootstraps, num_trees, master_train, test_data):
+	'''
+	Builds the different models required for the different sets
+	Random forest from sklearn ensemble
+	Num of trees is kept at 10
+	'''		
+	models = []
+	for i in range(num_bootstraps):
+		print ('Building forest:\t'+str(i))
+		train_sub_indep = train_indep[i]
+		indep_columns = train_sub_indep.columns.tolist()
+		indep_columns.remove('sl_uuid')
+		train_sub_indep = train_sub_indep[indep_columns]
+		train_sub_dep = train_dep[i]['churn_flag'].tolist()
+		#print train_sub_dep.head()
+		#Model variable
+		model = RF(n_estimators = num_trees, criterion = 'gini', bootstrap = False, n_jobs=-1)
+		model.fit(train_sub_indep, train_sub_dep)
+		print ('Model '+str(i)+' built:')
+		print ('Accuracy: '+str(model.score(train_sub_indep, train_sub_dep)))
+		models.append(model)
+	
+	print ('Evaluating train data')
+	indep_columns = master_train.columns.tolist()
+	indep_columns.remove('churn_flag')
+	indep_columns.remove('sl_uuid')
+	master_indep = master_train[indep_columns]
+	master_dep = master_train[['churn_flag']]
+	predictor = {}
+	pred_series = []
+	for i in models:
+		prediction = i.predict(master_indep)
+		colname = 'Model'+str(models.index(i))
+		predictor[colname] = prediction
+	
+	pred_df = pd.DataFrame(predictor, index = master_dep.index)
+	full_pred = pred_df.mean(1)
+	master_dep['join_col'] = master_dep.index
+	probability = pred_df.mean(1)
+	pred_df['prob'] = probability
+	final_pred = []
+	for i in pred_df['prob']:
+		if i>= 0.85:
+			final_pred.append(1)
+		else:
+			final_pred.append(0)
+	pred_df['final_pred'] = final_pred
+	#pred_df.to_excel('pred_df.xlsx')
+	pred_df['join_col'] = pred_df.index
+	master_dep = pd.merge(master_dep, pred_df, on=['join_col'], how='left')
+	acc_check = master_dep[master_dep['churn_flag'] != master_dep['final_pred']].copy()
+	acc_check = float(len(acc_check))/float(len(master_dep))
+	print acc_check
+	#master_dep.to_excel('Final_pred.xlsx')
+	score_train = PRFS(y_true=master_dep['churn_flag'], y_pred=master_dep['final_pred'], average='binary')
+	score_train2 = PRFS(y_true=master_dep['churn_flag'], y_pred=master_dep['final_pred'], average='binary', pos_label = 0)
+	print ('Model accuracy:\t' + str(1.0 - acc_check))	
+	print ('Precision in predicting churners: \t' + str(score_train[0]))
+	print ('Recall:\t' + str(score_train[1]))	
+	#print score_train2
+
+
+	print ('Evaluating test data')
+	indep_columns = master_train.columns.tolist()
+	indep_columns.remove('churn_flag')
+	indep_columns.remove('sl_uuid')
+	master_indep = test_data[indep_columns]
+	master_dep = test_data[['churn_flag']]
+	predictor = {}
+	pred_series = []
+	for i in models:
+		prediction = i.predict(master_indep)
+		colname = 'Model'+str(models.index(i))
+		predictor[colname] = prediction
+	
+	pred_df = pd.DataFrame(predictor, index = master_dep.index)
+	full_pred = pred_df.mean(1)
+	master_dep['join_col'] = master_dep.index
+	probability = pred_df.mean(1)
+	pred_df['prob'] = probability
+	final_pred = []
+	for i in pred_df['prob']:
+		if i>= 0.85:
+			final_pred.append(1)
+		else:
+			final_pred.append(0)
+	pred_df['final_pred'] = final_pred
+	#pred_df.to_excel('pred_df.xlsx')
+	pred_df['join_col'] = pred_df.index
+	master_dep = pd.merge(master_dep, pred_df, on=['join_col'], how='left')
+	acc_check = master_dep[master_dep['churn_flag'] != master_dep['final_pred']].copy()
+	acc_check = float(len(acc_check))/float(len(master_dep))
+	
+	#master_dep.to_excel('Final_pred.xlsx')
+	score_train = PRFS(y_true=master_dep['churn_flag'], y_pred=master_dep['final_pred'], average='binary')
+	score_train2 = PRFS(y_true=master_dep['churn_flag'], y_pred=master_dep['final_pred'], average='binary', pos_label = 0)
+	print ('Model accuracy:\t' + str(1.0 - acc_check))
+	print ('Precision in predicting churners: \t' + str(score_train[0]))
+	print ('Recall:\t' + str(score_train[1]))	
 		
-		
+	return models	
 		
 def main():
 	#---------PROCESS STEP:- CREATING VARIABLES FROM COMM LINE ARGS
@@ -360,9 +479,10 @@ def main():
 	START_DATE = arguments[1]
 	END_DATE = arguments[2]
 	GOBACK_TIME = arguments[3]
-	print type(arguments[0])
-	print arguments[1]
-	print arguments[2]
+	NUM_BOOTSTRAPS = 50
+	PERCENT = 0.2
+	NUM_TREES = 100
+	
 	
 	#---------PROCESS STEP:- PROCESS WHICH PHASE TO EXECUTE:
 	if EXECUTE_PHASE == '1':
@@ -372,6 +492,7 @@ def main():
 		tk_data = raw_data_dict['tk_data']
 		tt_data = raw_data_dict['tt_data']
 		model_df = data_transform(sl_data, tk_data, tt_data)
+		return_dict = train_test_split(model_df, PERCENT, NUM_BOOTSTRAPS)
 	
 	elif EXECUTE_PHASE == '2':
 		#Skip data pull
@@ -380,13 +501,30 @@ def main():
 		tk_data = raw_data_dict['tk_data']
 		tt_data = raw_data_dict['tt_data']
 		model_df = data_transform(sl_data, tk_data, tt_data)
+		return_dict = train_test_split(model_df, PERCENT, NUM_BOOTSTRAPS)
+		train_indep = return_dict['train_indep']
+		train_dep = return_dict['train_dep']
+		test_data = return_dict['test_set']
+		master_train = return_dict['master_train']
+		models = model_build(train_indep, train_dep, NUM_BOOTSTRAPS, NUM_TREES, master_train, test_data)
 		
+	elif EXECUTE_PHASE == '3':
+		#Skip data load()
+		model_df = pk.load(open('/home/rsrash1990/Ravi Files/Work Projects/Churn Model/Pickle data/model_df.pk','r'))
+		return_dict = train_test_split(model_df, PERCENT, NUM_BOOTSTRAPS)
+		train_indep = return_dict['train_indep']
+		train_dep = return_dict['train_dep']
+		test_data = return_dict['test_set']
+		master_train = return_dict['master_train']
+		models = model_build(train_indep, train_dep, NUM_BOOTSTRAPS, NUM_TREES, master_train, test_data)
+			
 		
 
 #Main Execution:
 if __name__ == '__main__':
 	main()
 	'''
-	python model_run.py 2 2013-12-01 2015-01-01 60
+	python model_run.py 3 2013-12-01 2015-01-01 60
 	python model_run.py 1 2013-12-01 2015-01-01 60
 	'''
+
