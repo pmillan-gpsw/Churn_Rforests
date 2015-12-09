@@ -471,6 +471,106 @@ def model_build(train_indep, train_dep, num_bootstraps, num_trees, master_train,
 	print ('Recall:\t' + str(score_train[1]))	
 		
 	return models	
+
+
+def logistic_ensemble(train_indep, train_dep, num_bootstraps, num_trees, master_train, test_data):
+	models = []
+	for i in range(num_bootstraps):
+		print ('Building forest:\t'+str(i))
+		train_sub_indep = train_indep[i]
+		indep_columns = train_sub_indep.columns.tolist()
+		indep_columns.remove('sl_uuid')
+		train_sub_indep = train_sub_indep[indep_columns]
+		train_sub_dep = train_dep[i]['churn_flag'].tolist()
+		#print train_sub_dep.head()
+		#Model variable
+		model = RF(n_estimators = num_trees, criterion = 'gini', bootstrap = False, n_jobs=-1)
+		model.fit(train_sub_indep, train_sub_dep)
+		print ('Model '+str(i)+' built:')
+		print ('Accuracy: '+str(model.score(train_sub_indep, train_sub_dep)))
+		models.append(model)
+	
+	print ('Evaluating train data')
+	indep_columns = master_train.columns.tolist()
+	indep_columns.remove('churn_flag')
+	indep_columns.remove('sl_uuid')
+	master_indep = master_train[indep_columns]
+	master_dep = master_train[['churn_flag']]
+	predictor = {}
+	pred_series = []
+	for i in models:
+		prediction = i.predict(master_indep)
+		colname = 'Model'+str(models.index(i))
+		predictor[colname] = prediction
+	
+	pred_df = pd.DataFrame(predictor, index = master_dep.index)
+	full_pred = pred_df.mean(1)
+	master_dep['join_col'] = master_dep.index
+	probability = pred_df.mean(1)
+	pred_df['prob'] = probability
+	final_pred = []
+	for i in pred_df['prob']:
+		if i>= 0.85:
+			final_pred.append(1)
+		else:
+			final_pred.append(0)
+	pred_df['final_pred'] = final_pred
+	#pred_df.to_excel('pred_df.xlsx')
+	pred_df['join_col'] = pred_df.index
+	master_dep = pd.merge(master_dep, pred_df, on=['join_col'], how='left')
+	acc_check = master_dep[master_dep['churn_flag'] != master_dep['final_pred']].copy()
+	acc_check = float(len(acc_check))/float(len(master_dep))
+	print acc_check
+	#master_dep.to_excel('Final_pred.xlsx')
+	score_train = PRFS(y_true=master_dep['churn_flag'], y_pred=master_dep['final_pred'], average='binary')
+	score_train2 = PRFS(y_true=master_dep['churn_flag'], y_pred=master_dep['final_pred'], average='binary', pos_label = 0)
+	print ('Model accuracy:\t' + str(1.0 - acc_check))	
+	print ('Precision in predicting churners: \t' + str(score_train[0]))
+	print ('Recall:\t' + str(score_train[1]))	
+	#print score_train2
+
+
+	print ('Evaluating test data')
+	indep_columns = master_train.columns.tolist()
+	indep_columns.remove('churn_flag')
+	indep_columns.remove('sl_uuid')
+	master_indep = test_data[indep_columns]
+	master_dep = test_data[['churn_flag']]
+	predictor = {}
+	pred_series = []
+	for i in models:
+		prediction = i.predict(master_indep)
+		colname = 'Model'+str(models.index(i))
+		predictor[colname] = prediction
+	
+	pred_df = pd.DataFrame(predictor, index = master_dep.index)
+	full_pred = pred_df.mean(1)
+	master_dep['join_col'] = master_dep.index
+	probability = pred_df.mean(1)
+	pred_df['prob'] = probability
+	final_pred = []
+	for i in pred_df['prob']:
+		if i>= 0.85:
+			final_pred.append(1)
+		else:
+			final_pred.append(0)
+	pred_df['final_pred'] = final_pred
+	#pred_df.to_excel('pred_df.xlsx')
+	pred_df['join_col'] = pred_df.index
+	master_dep = pd.merge(master_dep, pred_df, on=['join_col'], how='left')
+	acc_check = master_dep[master_dep['churn_flag'] != master_dep['final_pred']].copy()
+	acc_check = float(len(acc_check))/float(len(master_dep))
+	
+	#master_dep.to_excel('Final_pred.xlsx')
+	score_train = PRFS(y_true=master_dep['churn_flag'], y_pred=master_dep['final_pred'], average='binary')
+	score_train2 = PRFS(y_true=master_dep['churn_flag'], y_pred=master_dep['final_pred'], average='binary', pos_label = 0)
+	print ('Model accuracy:\t' + str(1.0 - acc_check))
+	print ('Precision in predicting churners: \t' + str(score_train[0]))
+	print ('Recall:\t' + str(score_train[1]))	
+		
+	return models	
+	
+
 		
 def main():
 	#---------PROCESS STEP:- CREATING VARIABLES FROM COMM LINE ARGS

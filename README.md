@@ -41,4 +41,13 @@ if he is an active customer)* ticketing activity, his service line history
 ###Results:
 ![Results](/Screenshots/Result.png)
 
+###Next steps:
 
+* **Send NPS surveys to potential churners to validate model**
+  1. Filter people who have bill cycle days in the next week
+  2. Get their 2 month history on ticketing
+  3. Find list of highly probable churners
+  4. Send NPS surveys. Analyze average response with our regular nps_surveys using t-test
+  
+* **What do we do about people who know are going to churn?**
+  1. What factors are causing them to churn?
