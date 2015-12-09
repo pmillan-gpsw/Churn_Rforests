@@ -41,6 +41,15 @@ if he is an active customer)* ticketing activity, his service line history
 ###Results:
 ![Results](/Screenshots/Result.png)
 
+###Comparison with other models & methods:
+
+Model | Whole data (Accuracy) | Whole data (Precision) | Whole data (Recall) | Downsampled bootstrap(Accuracy) | DS (Precision) | DS (Recall)
+----- | --------------------- | ---------------------- | ------------------- | ------------------------------- | -------------- | -----------
+Random Forest | 95% | 80% | 70% | 95% | 80% | 70%
+Logistic Regression | 85% | 38% | 72% | 85% | 38% | 72%
+
+
+
 ###Next steps:
 
 * **Send NPS surveys to potential churners to validate model**
