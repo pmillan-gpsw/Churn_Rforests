@@ -38,3 +38,7 @@ if he is an active customer) ticketing activity, his service line history
 ###Model Design:
 ######Data split: 
 ![Data split](/Screenshots/datasplit.png)
+
+
+###Results:
+![Results](/Screenshots/Result.png)
