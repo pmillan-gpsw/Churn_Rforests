@@ -6,7 +6,7 @@ his recent (going back 60 days from deactivation date or current date
 if he is an active customer) ticketing activity, his service line history
 
 ###Data:
-* Serviceline data : customer_view
+* **Serviceline data** : customer_view
   * Customer life -> Days since activation
   * Current device type -> Moto E, G or X 
   * Current plan 
