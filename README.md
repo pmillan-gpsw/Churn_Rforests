@@ -4,8 +4,18 @@ Predicting the probability that a customer will churn looking at
 his recent (going back 60 days from deactivation date or current date
 if he is an active customer) ticketing activity, his service line history
 
-###Features:
-	1. Most recent ticket type
+###Data:
+	1. **Serviceline data** : *customer_view*
+		1. Customer life -> Days since activation
+		2. Current device type -> Moto E, G or X 
+		3. Current plan 
+		4. Device switch flag -> Current device different from the one 
+			used for first activation
+		5. Device life -> Days since current device activation
+		6. Last bill date -> (Not a model variable)
+	
+	2. **Ticket data** : *zd_view*
+		1. 
 	2. Days since last ticket
 	3. Customer life since activation
 	4. Device switch
