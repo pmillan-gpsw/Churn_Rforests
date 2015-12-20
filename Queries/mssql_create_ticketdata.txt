@@ -3,6 +3,8 @@ CREATE TABLE customer_tkdata
 	sl_uuid VARCHAR(255) NOT NULL,
 	churn_flag INT,
 	num_tickets INT, 
+	first_time NUMERIC,
+	full_time NUMERIC,
 	PRIMARY KEY (sl_uuid)
 );
 	

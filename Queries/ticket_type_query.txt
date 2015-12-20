@@ -12,40 +12,54 @@ with bill_data as
 				sl_deactivated_date is null 
 				and bill_cycle_day is not null 
 				and bill_cycle_day like '%EOM%'
-				and extract(day from current_date ) < 30 
-			then to_date(cast(extract(year from current_date - 30) as text)||to_char(extract(month from current_date - 30), 'FM00')||'30','YYYYMMDD')
+				and extract(day from '%MOD_END_DATE%'::date ) < 30 
+			then to_date(cast(extract(year from '%MOD_END_DATE%'::date - 30) as text)||to_char(extract(month from '%MOD_END_DATE%'::date - 30), 'FM00')||'30','YYYYMMDD')
 			when 
 				sl_deactivated_date is null 
 				and bill_cycle_day2 is not null 
 				and bill_cycle_day like '%EOM%'
-				and extract(day from current_date ) >= 30 
-			then to_date(cast(extract(year from current_date ) as text)||to_char(extract(month from current_date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
+				and extract(day from '%MOD_END_DATE%'::date ) >= 30 
+			then to_date(cast(extract(year from '%MOD_END_DATE%'::date ) as text)||to_char(extract(month from '%MOD_END_DATE%'::date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
 			when 
 				sl_deactivated_date is null 
 				and bill_cycle_day not like '%EOM%'
 				and bill_cycle_day is not null
-				and cast(bill_cycle_day2 as integer) <= extract(day from current_date ) 
-			then to_date(cast(extract(year from current_date) as text)||to_char(extract(month from current_date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
+				and cast(bill_cycle_day2 as integer) <= extract(day from '%MOD_END_DATE%'::date ) 
+			then to_date(cast(extract(year from '%MOD_END_DATE%'::date) as text)||to_char(extract(month from '%MOD_END_DATE%'::date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
 
 			--Second case: When the person has not churned yet & bill cycle day is greater than current date ( bill cycle date yet to pass )-> Choose the bill cycle day and create the previous bill cycle day by extracting parts of current date
 			when 
 				sl_deactivated_date is null  
 				and bill_cycle_day not like '%EOM%'
 				and bill_cycle_day is not null
-				and cast(bill_cycle_day2 as integer) > extract(day from current_date ) 
-			then to_date(cast(extract(year from current_date - 30) as text)||to_char(extract(month from current_date - 30), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
+				and cast(bill_cycle_day2 as integer) > extract(day from '%MOD_END_DATE%'::date ) 
+			then to_date(cast(extract(year from '%MOD_END_DATE%'::date - 30) as text)||to_char(extract(month from '%MOD_END_DATE%'::date- 30), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
 			--Third case: When the person has churned -> Choose the bill cycle day before the churn date
 			when
-				sl_deactivated_date is not null
+				sl_deactivated_date is not null and sl_deactivated_date <= '%MOD_END_DATE%'::date + 30
 				and bill_cycle_day2 is not null
 				and cast(bill_cycle_day2 as integer) > extract(day from sl_deactivated_date ) 
 			then to_date(cast(extract(year from sl_deactivated_date - 30) as text)||to_char(extract(month from sl_deactivated_date - 30), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
 			when
-				sl_deactivated_date is not null
+				sl_deactivated_date is not null and sl_deactivated_date <= '%MOD_END_DATE%'::date + 30
 				and bill_cycle_day2 is not null
 				and cast(bill_cycle_day2 as integer) <= extract(day from sl_deactivated_date ) 
 			then to_date(cast(extract(year from sl_deactivated_date) as text)||to_char(extract(month from sl_deactivated_date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD') 
-			else current_date
+
+			--fOURTH case: When the person has churned -> Choose the bill cycle day before the churn date
+			when
+				sl_deactivated_date is not null and sl_deactivated_date > '%MOD_END_DATE%'::date + 30
+				and bill_cycle_day2 is not null
+				and cast(bill_cycle_day2 as integer) > extract(day from '%MOD_END_DATE%'::date ) 
+			then to_date(cast(extract(year from '%MOD_END_DATE%'::date - 30) as text)||to_char(extract(month from '%MOD_END_DATE%'::date - 30), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
+			when
+				sl_deactivated_date is not null and sl_deactivated_date <= '%MOD_END_DATE%'::date + 30
+				and bill_cycle_day2 is not null
+				and cast(bill_cycle_day2 as integer) <= extract(day from '%MOD_END_DATE%'::date ) 
+			then to_date(cast(extract(year from '%MOD_END_DATE%'::date) as text)||to_char(extract(month from '%MOD_END_DATE%'::date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD') 
+
+
+			else '%MOD_END_DATE%'::date
 		end as last_bill_date
   
 	from
@@ -64,6 +78,7 @@ with bill_data as
 		and last_invoice_date is not null
     --and bill_cycle_day not like '%EOM%'  
 )
+
 
 	--Ticket type query 
 
@@ -95,7 +110,7 @@ with bill_data as
 				internal_ticket_classification as ticket_class, 
 				ticket_type, 
 				tags
-			from
+from
 			(
 				select * 
 				from 
@@ -109,27 +124,29 @@ with bill_data as
 								customer_view 
 							where 
 								bill_cycle_day is not null 
-								and sl_activated_date between '%MOD_START_DATE%' and '%MOD_END_DATE%'
+								and sl_activated_date between '%MOD_START_DATE%' and '%MOD_END_DATE%'::date - %GOBACK_TIME%
 						)
-					and group_name != 'Cancellations'
-					and request_type != 'rw_cancel'
-					and internal_ticket_classification not in ('rw_cancel_automated', 'rw_cancel_manual')		
+					--conditions for removing tickets from the list	
+					and  group_name not in ( 'Cancellations', 'Billing', 'Porting', 'Production Test')
+					and request_type not in ( 'rw_cancel', 'rw_num_trans')
+					and internal_ticket_classification not in ('rw_cancel_automated', 'rw_cancel_manual', 'rw_porting', 'rw_presales', 'rw_billing_payment', 'billing_10_discount','rw_order_status_cancel_change','rw_order_accessories','rw_jellybean_credit')	
+					
 			)
 		)as A
-	left join 
+	inner join 
 		(
 			select *, 
 				case 
-					when 
-						sl_deactivated_date is not null 
-					then 1 
-					else 0 
-				end as churn_flag 
+	when sl_deactivated_date is null then 0
+	when sl_deactivated_date is not null and sl_deactivated_date <= '%MOD_END_DATE%'::date + 30 then 1
+	when sl_deactivated_date is not null and sl_deactivated_date > '%MOD_END_DATE%'::date + 30 then 0
+	end as churn_flag
+				
 			from
 				bill_data
 		) as B
 	on 
 		A.sl_uuid = B.sl_uuid 
-		and A.created_at >= B.last_bill_date - %GOBACK_TIME%
+		and A.created_at between B.last_bill_date - %GOBACK_TIME% and '%MOD_END_DATE%'
 ;
 

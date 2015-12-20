@@ -1,0 +1,156 @@
+--Usage query
+with bill_data as 
+(
+	--Bill day query
+	select 
+		sl_uuid, 
+		bill_cycle_day,
+		sl_deactivated_date,
+		last_invoice_date,
+		case
+			--First case: When the person has not churned yet & bill cycle day is lesser than current date ( bill cycle date just passed )-> Choose the bill cycle day and create the previous bill cycle day by extracting parts of current date
+			when 
+				sl_deactivated_date is null 
+				and bill_cycle_day is not null 
+				and bill_cycle_day like '%EOM%'
+				and extract(day from '%MOD_END_DATE%'::date ) < 30 
+			then to_date(cast(extract(year from '%MOD_END_DATE%'::date - 30) as text)||to_char(extract(month from '%MOD_END_DATE%'::date - 30), 'FM00')||'30','YYYYMMDD')
+			when 
+				sl_deactivated_date is null 
+				and bill_cycle_day2 is not null 
+				and bill_cycle_day like '%EOM%'
+				and extract(day from '%MOD_END_DATE%'::date ) >= 30 
+			then to_date(cast(extract(year from '%MOD_END_DATE%'::date ) as text)||to_char(extract(month from '%MOD_END_DATE%'::date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
+			when 
+				sl_deactivated_date is null 
+				and bill_cycle_day not like '%EOM%'
+				and bill_cycle_day is not null
+				and cast(bill_cycle_day2 as integer) <= extract(day from '%MOD_END_DATE%'::date ) 
+			then to_date(cast(extract(year from '%MOD_END_DATE%'::date) as text)||to_char(extract(month from '%MOD_END_DATE%'::date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
+
+			--Second case: When the person has not churned yet & bill cycle day is greater than current date ( bill cycle date yet to pass )-> Choose the bill cycle day and create the previous bill cycle day by extracting parts of current date
+			when 
+				sl_deactivated_date is null  
+				and bill_cycle_day not like '%EOM%'
+				and bill_cycle_day is not null
+				and cast(bill_cycle_day2 as integer) > extract(day from '%MOD_END_DATE%'::date ) 
+			then to_date(cast(extract(year from '%MOD_END_DATE%'::date - 30) as text)||to_char(extract(month from '%MOD_END_DATE%'::date- 30), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
+			--Third case: When the person has churned -> Choose the bill cycle day before the churn date
+			when
+				sl_deactivated_date is not null and sl_deactivated_date <= '%MOD_END_DATE%'::date + 30
+				and bill_cycle_day2 is not null
+				and cast(bill_cycle_day2 as integer) > extract(day from sl_deactivated_date ) 
+			then to_date(cast(extract(year from sl_deactivated_date - 30) as text)||to_char(extract(month from sl_deactivated_date - 30), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
+			when
+				sl_deactivated_date is not null and sl_deactivated_date <= '%MOD_END_DATE%'::date + 30
+				and bill_cycle_day2 is not null
+				and cast(bill_cycle_day2 as integer) <= extract(day from sl_deactivated_date ) 
+			then to_date(cast(extract(year from sl_deactivated_date) as text)||to_char(extract(month from sl_deactivated_date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD') 
+
+			--fOURTH case: When the person has churned -> Choose the bill cycle day before the churn date
+			when
+				sl_deactivated_date is not null and sl_deactivated_date > '%MOD_END_DATE%'::date + 30
+				and bill_cycle_day2 is not null
+				and cast(bill_cycle_day2 as integer) > extract(day from '%MOD_END_DATE%'::date ) 
+			then to_date(cast(extract(year from '%MOD_END_DATE%'::date - 30) as text)||to_char(extract(month from '%MOD_END_DATE%'::date - 30), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
+			when
+				sl_deactivated_date is not null and sl_deactivated_date <= '%MOD_END_DATE%'::date + 30
+				and bill_cycle_day2 is not null
+				and cast(bill_cycle_day2 as integer) <= extract(day from '%MOD_END_DATE%'::date ) 
+			then to_date(cast(extract(year from '%MOD_END_DATE%'::date) as text)||to_char(extract(month from '%MOD_END_DATE%'::date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD') 
+
+
+			else '%MOD_END_DATE%'::date
+		end as last_bill_date
+  
+	from
+		(
+			select *,
+			case
+				when bill_cycle_day = 'EOM' then '30'
+				else bill_cycle_day
+			end as bill_cycle_day2
+			from 
+				customer_view
+		) 
+	where 
+		sl_activated_date >= '%MOD_START_DATE%' 
+		and sl_activated_date <= '%MOD_END_DATE%'
+		and last_invoice_date is not null
+    --and bill_cycle_day not like '%EOM%'  
+)
+
+--Get usage stats based on the date
+
+,
+
+--Get usage stats based on the date
+ usage_dat as (
+
+select sl_uuid,
+      churn_flag,
+      time_group,
+      avg(voice) as voice,
+      avg(sms) as sms,
+      avg(data) as data,
+      	count(*) as numdays
+      from (
+
+select
+	A.sl_uuid,
+	A.last_bill_date,
+	B.usage_date,
+	B.voice,
+	B.sms,
+	B.data,
+	case
+		when A.sl_deactivated_date is null then 0
+		when A.sl_deactivated_date is not null and A.sl_deactivated_date <= '%MOD_END_DATE%'::date + 30 then 1
+		when A.sl_deactivated_date is not null and A.sl_deactivated_date > '%MOD_END_DATE%'::date + 30 then 0
+	end as churn_flag,
+		
+	case
+		when A.last_bill_date - B.usage_date <= %GOBACK_TIME% then 1
+		when A.last_bill_date - B.usage_date between %GOBACK_TIME% + 1 and %GOBACK_TIME% + 121 then 2
+	end as time_group
+
+	from
+	bill_data as A
+	left join
+(
+select 
+    sl_uuid, 
+    time_stamp::date as usage_date, 
+    kx_wifi_voice_seconds + kx_cell_voice_seconds as voice, 
+    kx_wifi_sms + kx_cell_sms as sms, 
+    kx_wifi_data_bytes + kx_cell_data_bytes as data 
+    from kx ) as B
+	on A.sl_uuid = B.sl_uuid
+	and B.usage_date <= A.last_bill_date
+	)
+--where time_group is not null and churn_flag = 1	
+group by sl_uuid, churn_flag, time_group
+having count(*) > 15
+
+)
+
+
+select A.sl_uuid, 
+case when B.voice = 0 then cast(0 as float)
+else cast(A.voice as float)/cast(B.voice as float)
+end as voice_dt,
+case when B.data = 0 then cast(0 as float)
+else cast(A.data as float)/cast(B.data as float)
+end as data_dt
+from (
+select * from usage_dat
+where time_group = 1
+) as A
+inner join
+(
+select * from usage_dat
+where time_group = 2
+) as B
+on A.sl_uuid = B.sl_uuid 
+
+

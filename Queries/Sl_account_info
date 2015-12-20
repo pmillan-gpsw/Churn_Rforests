@@ -1,25 +1,40 @@
 --Collated query
 
-select A.sl_uuid, A.last_invoice_date, A.churn_flag, B.customer_life, B.sl_activated_date, B.sl_deactivated_date, C.multiline_flag, D.device_switch,E.device_type
+select 
+	A.sl_uuid, 
+	A.last_invoice_date, 
+	A.churn_flag, 
+	F.plan_var,
+	B.customer_life as customer_life, 
+	B.sl_activated_date, 
+	B.sl_deactivated_date, 
+	C.multiline_flag, 
+	G.device_switch,
+	E.device_type,
+	G.device_life
+	
 from 
 (
   select sl_uuid, last_invoice_date,
   case
 	when sl_deactivated_date is null then 0
-	when sl_deactivated_date is not null then 1
-	end as churn_flag
+	when sl_deactivated_date is not null and sl_deactivated_date <= '%MOD_END_DATE%'::date + 30 then 1
+	when sl_deactivated_date is not null and sl_deactivated_date > '%MOD_END_DATE%'::date + 30 then 0
+	end as churn_flag	
   from customer_view 
   where sl_activated_date > '%MOD_START_DATE%' 
-  and sl_activated_date <= '%MOD_END_DATE%' 
-  and last_invoice_date is not null
+  and sl_activated_date <= '%MOD_END_DATE%'::date - 60 
+  --and (sl_deactivated_date is null or sl_deactivated_date between '%MOD_END_DATE%' and '%MOD_END_DATE%'::date + 30)
+  and bill_cycle_day is not null
 ) as A
 left join
 (
 --Selecting sl_activated_date and deactivated_date for customer life calculation
   select sl_uuid, sl_activated_date, sl_deactivated_date,
   case
-  when sl_deactivated_date is not null then sl_deactivated_date - sl_activated_date
-  when sl_deactivated_date is null then current_date - sl_activated_date
+  when sl_deactivated_date is not null and sl_deactivated_date <= '%MOD_END_DATE%'::date + 30 then sl_deactivated_date - sl_activated_date
+  when sl_deactivated_date is not null and sl_deactivated_date > '%MOD_END_DATE%'::date + 30 then datediff(day, sl_activated_date,'%MOD_END_DATE%'::date + 30) 
+  when sl_deactivated_date is null then '%MOD_END_DATE%'::date + 30 - sl_activated_date
   end as customer_life
   from customer_view
 ) as B
@@ -35,7 +50,8 @@ left join
   left join
   (
     select account_crm, count(distinct sl_uuid) as num_slines
-    from customer_view
+    from customer_history
+    where etl_date = '%MOD_END_DATE%'::date and sl_status = 'Activated'
     group by account_crm
   ) as B
 on A.account_crm = B.account_crm
@@ -58,33 +74,50 @@ left join
 --Device type is cheap, moderate and expensive
   select sl_uuid, 
   case
-  when most_recent_equipment like '%Moto E%' then 1
-  when most_recent_equipment like '%Moto G%' then 2
-  when most_recent_equipment like '%Moto X%' then 3
-  else 4
-  end as device_type, 
+  when most_recent_equipment like '%Moto E 2nd Gen%' then 'Moto E2'
+  when most_recent_equipment like '%Moto X 2nd Gen%' then 'Moto X2'
+  when most_recent_equipment like '%Moto E%' then 'Moto E'
+  when most_recent_equipment like '%Moto G 3rd Gen%' then 'Moto G3'
+  when most_recent_equipment like '%Moto G%' then 'Moto G'
+  when most_recent_equipment like '%Moto X%' then 'Moto X'        
+  else 'Other'
+  end as device_type
+  from customer_history where etl_date = '%MOD_END_DATE%') as E
+  on A.sl_uuid = E.sl_uuid
+  left join
+  (
+  select sl_uuid,
   case
-  when equipment_deactivated_date is null then current_date - equipment_activated_date
-  else equipment_deactivated_date - equipment_activated_date
+    when sl_deactivated_date is null and equipment_activated_date is not null and equipment_activated_date <= '%MOD_END_DATE%' then datediff(day,equipment_activated_date,'%MOD_END_DATE%'::date + 30)
+   when sl_deactivated_date is null and equipment_activated_date is not null and equipment_activated_date > '%MOD_END_DATE%' then datediff(day,sl_activated_date,'%MOD_END_DATE%'::date + 30)
+  when sl_deactivated_date is null and equipment_activated_date is null then datediff(day,sl_activated_date,'%MOD_END_DATE%'::date + 30)
+  when sl_deactivated_date is not null and sl_deactivated_date <= '%MOD_END_DATE%'::date + 30 and equipment_activated_date is not null and equipment_activated_date <= '%MOD_END_DATE%' then sl_deactivated_date - equipment_activated_date
+  when sl_deactivated_date is not null and sl_deactivated_date > '%MOD_END_DATE%'::date + 30 and equipment_activated_date is not null and equipment_activated_date <= '%MOD_END_DATE%' then datediff(day,equipment_activated_date,'%MOD_END_DATE%'::date + 30)
+  when sl_deactivated_date is not null and sl_deactivated_date <= '%MOD_END_DATE%'::date + 30 and equipment_activated_date is null then sl_deactivated_date - sl_activated_date
+  when sl_deactivated_date is not null and sl_deactivated_date > '%MOD_END_DATE%'::date + 30 and equipment_activated_date is null then datediff(day, sl_activated_date, '%MOD_END_DATE%'::date + 30)
+  
+  when sl_deactivated_date is not null and sl_deactivated_date <= '%MOD_END_DATE%'::date + 30 and equipment_activated_date is not null and equipment_activated_date > '%MOD_END_DATE%' then sl_deactivated_date - sl_activated_date
+  when sl_deactivated_date is not null and sl_deactivated_date > '%MOD_END_DATE%'::date + 30 and equipment_activated_date is not null and equipment_activated_date > '%MOD_END_DATE%' then datediff(day,sl_activated_date,'%MOD_END_DATE%'::date + 30)
   end as device_life,
   case
-  when equipment_activated_date > sl_activated_date then 1
+  when equipment_activated_date > sl_activated_date + 60 and equipment_activated_date <= '%MOD_END_DATE%' then 1
+  when equipment_activated_date > sl_activated_date + 60 and equipment_activated_date > '%MOD_END_DATE%' then 0
   else 0
   end as device_switch
   from customer_view
-) as E
-on A.sl_uuid = E.sl_uuid
+) as G
+on A.sl_uuid = G.sl_uuid
 left join
 (
   --Plan variable
   select sl_uuid, plan_base,
   case 
-  when plan_base like '%Talk + Text%' then 1
-  when plan_base like '%Republic Refund%' then 2
-  when plan_base like '%Wi-Fi Only Service%' then 0
-  when plan_base like '%Cell + 3G%' then 3
-  when plan_base like '%Cell + 4G%' then 4
-  else 2
+  when plan_base like '%Talk + Text%' then 'Talk and Text'
+  when plan_base like '%Republic Refund%' then 'Refund'
+  when plan_base like '%Wi-Fi Only Service%' then 'Wifi only'
+  when plan_base like '%Cell + 3G%' then 'G3'
+  when plan_base like '%Cell + 4G%' then 'G4'
+  else 'Other'
   end as plan_var
   from customer_view
 ) as F

@@ -11,13 +11,13 @@ select
     sl_deactivated_date is null 
     and bill_cycle_day is not null 
     and bill_cycle_day like '%EOM%'
-    and extract(day from current_date ) < 30 
-      then to_date(cast(extract(year from current_date - 30) as text)||to_char(extract(month from current_date - 30), 'FM00')||'30','YYYYMMDD')
+    and extract(day from '%MOD_END_DATE%'::date ) < 30 
+      then to_date(cast(extract(year from '%MOD_END_DATE%'::date - 30) as text)||to_char(extract(month from '%MOD_END_DATE%'::date - 30), 'FM00')||'30','YYYYMMDD')
   when 
     sl_deactivated_date is null 
     and bill_cycle_day2 is not null 
     and bill_cycle_day like '%EOM%'
-    and extract(day from current_date ) >= 30 
+    and extract(day from '%MOD_END_DATE%'::date ) >= 30 
       then to_date(cast(extract(year from current_date ) as text)||to_char(extract(month from current_date), 'FM00')||to_char(to_number(bill_cycle_day2, '99'), 'FM00'),'YYYYMMDD')
   when 
     sl_deactivated_date is null 

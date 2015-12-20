@@ -1,0 +1,110 @@
+(lp0
+S'Customer Advocacy'
+p1
+aS'Customer Solutions'
+p2
+aS'RMA - Replacement'
+p3
+aS'Sales'
+p4
+aS'Technical Assistance'
+p5
+aS'rw_account'
+p6
+aS'rw_billing'
+p7
+aS'rw_order'
+p8
+aS'rw_tech'
+p9
+aS'rw_activation'
+p10
+aS'rw_app_hardware_republic'
+p11
+aS'rw_app_hardware_third_party'
+p12
+aS'rw_broken_damaged'
+p13
+aS'rw_call_completion'
+p14
+aS'rw_call_quality'
+p15
+aS'rw_cell_data'
+p16
+aS'rw_community_portal'
+p17
+aS'rw_existing_customer_upgrades'
+p18
+aS'rw_lost_stolen'
+p19
+aS'rw_other'
+p20
+aS'rw_phone_setup'
+p21
+aS'rw_plan_change_question'
+p22
+aS'rw_plan_features'
+p23
+aS'rw_rma_customer'
+p24
+aS'rw_spam'
+p25
+aS'rw_store_problems'
+p26
+aS'rw_taxes'
+p27
+aS'rw_text_msg'
+p28
+aS'rw_throttling'
+p29
+aS'rw_voicemail'
+p30
+aS'rw_wifi_setup'
+p31
+aS'Other_ttype'
+p32
+aS'issue'
+p33
+aS'question'
+p34
+aS'Moto E'
+p35
+aS'Moto G'
+p36
+aS'Moto X'
+p37
+aS'Moto X2'
+p38
+aS'Other_x'
+p39
+aS'G3'
+p40
+aS'G4'
+p41
+aS'Other_y'
+p42
+aS'Refund'
+p43
+aS'Talk and Text'
+p44
+aS'Wifi only'
+p45
+aS'device_switch'
+p46
+aS'customer_life'
+p47
+aS'multiline_flag'
+p48
+aS'device_life'
+p49
+aS'num_tickets'
+p50
+aS'first_time'
+p51
+aS'full_time'
+p52
+aS'voice_dt'
+p53
+aS'data_dt'
+p54
+a.

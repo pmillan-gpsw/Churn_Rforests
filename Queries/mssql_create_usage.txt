@@ -1,0 +1,8 @@
+CREATE TABLE customer_usage
+(
+	sl_uuid VARCHAR(255) NOT NULL,
+	voice_dt FLOAT,
+	data_dt FLOAT, 
+	PRIMARY KEY (sl_uuid)
+);
+	
